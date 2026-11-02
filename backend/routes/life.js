@@ -9,6 +9,7 @@ const SETTINGS_KEYS = {
   bed: 'time', wake: 'time', toeic_target: 'int', toeic_exam: 'date',
   calories: 'int', protein: 'int', carbs: 'int', fat: 'int', water: 'int',
   weight_goal: 'num', gym_plan: 'plan',
+  height: 'int', age: 'int', sex: 'sex', goal_note: 'text',
 };
 r.get('/settings', auth, wrap(async (req, res) => {
   const q = await pool.query('SELECT data FROM user_settings WHERE user_id=$1', [req.user.id]);
@@ -24,6 +25,8 @@ r.put('/settings', auth, wrap(async (req, res) => {
     if (t === 'time' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) out[k] = v;
     else if (t === 'date' && isDate(v)) out[k] = v;
     else if ((t === 'int' || t === 'num') && Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) < 1e6) out[k] = Number(v);
+    else if (t === 'sex' && ['male', 'female', 'other'].includes(v)) out[k] = v;
+    else if (t === 'text' && typeof v === 'string' && v.trim().length <= 300) out[k] = v.trim();
     else if (t === 'plan' && v && typeof v === 'object' && !Array.isArray(v)) {
       // gym_plan: { '0'..'6': 'tên buổi tập' }
       const plan = {};

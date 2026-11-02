@@ -9,6 +9,7 @@ export default function SettingsSheet({ settings, onClose, onSaved }) {
   const [f, setF] = useState({
     bed: s.bed, wake: s.wake, toeic_target: s.toeic_target, toeic_exam: s.toeic_exam || '',
     calories: s.calories, protein: s.protein, carbs: s.carbs, fat: s.fat, water: s.water, weight_goal: s.weight_goal ?? '',
+    sex: s.sex || '', age: s.age ?? '', height: s.height ?? '', goal_note: s.goal_note || '',
   });
   const [plan, setPlan] = useState(() => Object.fromEntries(WD_SHORT.map((_, i) => [i, s.gym_plan?.[i] || ''])));
   const [err, setErr] = useState('');
@@ -20,7 +21,7 @@ export default function SettingsSheet({ settings, onClose, onSaved }) {
     setBusy(true); setErr('');
     try {
       const body = { ...f, gym_plan: plan };
-      for (const k of ['toeic_target', 'calories', 'protein', 'carbs', 'fat', 'water', 'weight_goal', 'toeic_exam']) if (body[k] === '') body[k] = null;
+      for (const k of ['toeic_target', 'calories', 'protein', 'carbs', 'fat', 'water', 'weight_goal', 'toeic_exam', 'sex', 'age', 'height', 'goal_note']) if (body[k] === '') body[k] = null;
       onSaved(await api.saveSettings(body));
     } catch (e2) { setErr(e2.message); setBusy(false); }
   }
@@ -32,6 +33,15 @@ export default function SettingsSheet({ settings, onClose, onSaved }) {
   return (
     <Sheet title="Mục tiêu & cài đặt" onClose={onClose} onSubmit={save}>
       {err && <div className="err">{err}</div>}
+      <div className="field"><label>Hồ sơ cho PT ảo</label></div>
+      <div className="field two">
+        <div><label>Giới tính</label>
+          <select className="input" value={f.sex} onChange={set('sex')}><option value="">Không nói</option><option value="male">Nam</option><option value="female">Nữ</option><option value="other">Khác</option></select>
+        </div>
+        {row('Tuổi', 'age', nums)}
+      </div>
+      <div className="field two">{row('Chiều cao (cm)', 'height', nums)}<span /></div>
+      <div className="field"><label>Mục tiêu của bạn</label><input className="input" value={f.goal_note} maxLength={300} onChange={set('goal_note')} placeholder="VD: slim fit, vai rộng, bụng rõ, tăng cơ giảm mỡ" /></div>
       <div className="field"><label>Giấc ngủ</label></div>
       <div className="field two">{row('Giờ ngủ mục tiêu', 'bed', { type: 'time' })}{row('Giờ dậy mục tiêu', 'wake', { type: 'time' })}</div>
       <div className="field"><label>TOEIC</label></div>

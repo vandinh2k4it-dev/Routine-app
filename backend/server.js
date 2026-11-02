@@ -107,6 +107,7 @@ app.put('/api/me', auth, wrap(async (req, res) => {
 app.use('/api', require('./routes/habits'));
 app.use('/api', require('./routes/life'));
 app.use('/api', require('./routes/ai'));
+app.use('/api', require('./routes/coach'));
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Dữ liệu gửi lên quá lớn (ảnh đại diện quá nặng)' });

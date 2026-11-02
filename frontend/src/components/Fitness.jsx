@@ -3,6 +3,9 @@ import { api } from '../api.js';
 import { useLoad } from '../hooks.js';
 import { Columns, LineChart, Meter } from './charts.jsx';
 import { Empty, Field, Loading, PageHead, Seg, Sheet } from './ui.jsx';
+import WorkoutRunner from './WorkoutRunner.jsx';
+import ProgramSheet from './ProgramSheet.jsx';
+import { PROGRAM, dayForWeekday, estimateMinutes } from '../program.js';
 import { WD_SHORT, addDays, fromISO, num1, startOfWeek, toISO, todayISO, withDefaults, wdIndex } from '../utils.js';
 
 const EXERCISES = ['Bench Press', 'Incline Dumbbell Press', 'Overhead Press', 'Lateral Raise', 'Pull-up', 'Lat Pulldown', 'Barbell Row', 'Squat', 'Romanian Deadlift', 'Leg Press', 'Barbell Curl', 'Triceps Pushdown', 'Plank'];
@@ -29,6 +32,10 @@ function Train({ goal }) {
   const { data: ws, reload, err } = useLoad(() => api.get('/api/workouts', { from: range(120)[0], to: range(0)[1] }), []);
   const [sheet, setSheet] = useState(null);
   const [ex, setEx] = useState('');
+  const [runDay, setRunDay] = useState(null);
+  const [progOpen, setProgOpen] = useState(false);
+  const [pickIdx, setPickIdx] = useState(() => dayForWeekday(wdIndex(new Date()))?.idx ?? 0);
+  const [savedMsg, setSavedMsg] = useState('');
   const today = todayISO();
   const weekStart = startOfWeek(new Date());
 
@@ -75,7 +82,27 @@ function Train({ goal }) {
         })}
       </div>
 
-      <button className="btn" style={{ marginTop: 14 }} onClick={() => setSheet({ done_on: today, name: goal.gym_plan?.[wdIndex(new Date())] || '' })}>+ Ghi buổi tập</button>
+      {savedMsg && <div className="tip" style={{ marginTop: 14 }}>{savedMsg}</div>}
+      <div className="card pad progcard" style={{ marginTop: 14 }}>
+        <small>🎯 Chương trình tập</small>
+        <b>{dayForWeekday(wdIndex(new Date())) ? `Hôm nay: ${dayForWeekday(wdIndex(new Date())).title}` : 'Hôm nay nghỉ / đá banh ⚽'}</b>
+        <select className="input" value={pickIdx} onChange={(e) => setPickIdx(Number(e.target.value))}>
+          {PROGRAM.days.map((d) => <option key={d.idx} value={d.idx}>{WD_SHORT[d.idx]} · {d.title}</option>)}
+        </select>
+        {(() => {
+          const d = dayForWeekday(pickIdx);
+          let resume = false;
+          try { const r = JSON.parse(localStorage.getItem('cache:session')); resume = r && r.dayIdx === d.idx && r.date === today; } catch { /* bỏ qua */ }
+          return (
+            <>
+              <p>{d.items.length} bài · khoảng {estimateMinutes(d)} phút · {d.focus}</p>
+              <button className="btn" onClick={() => { setSavedMsg(''); setRunDay(d); }}>{resume ? '▶ Tiếp tục buổi đang tập' : '▶ Bắt đầu buổi tập'}</button>
+            </>
+          );
+        })()}
+        <button className="linkbtn" onClick={() => setProgOpen(true)}>Xem cả chương trình và hướng dẫn từng bài</button>
+      </div>
+      <button className="btn ghost" style={{ marginTop: 10 }} onClick={() => setSheet({ done_on: today, name: goal.gym_plan?.[wdIndex(new Date())] || '' })}>+ Tự ghi buổi tập</button>
 
       <div className="section-title">Progressive overload</div>
       {!names.length ? (
@@ -117,6 +144,8 @@ function Train({ goal }) {
       )}
       <div className="tip" style={{ marginTop: 14 }}>💤 Cơ bắp phát triển lúc nghỉ ngơi. Ngủ đủ 7–9 giờ và có ít nhất một ngày nghỉ mỗi tuần.</div>
 
+      {runDay && <WorkoutRunner day={runDay} workouts={ws} onClose={() => setRunDay(null)} onSaved={(n) => { setRunDay(null); setSavedMsg(`Đã lưu buổi tập: ${n} hiệp. Giỏi lắm! 💪`); reload(); }} />}
+      {progOpen && <ProgramSheet onClose={() => setProgOpen(false)} onStart={(d) => { setProgOpen(false); setPickIdx(d.idx); setSavedMsg(''); setRunDay(d); }} />}
       {sheet && <WorkoutSheet initial={sheet} names={[...new Set([...names, ...EXERCISES])]} lastSets={lastSets} onClose={() => setSheet(null)} onSaved={() => { setSheet(null); reload(); }} />}
     </>
   );

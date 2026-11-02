@@ -9,6 +9,7 @@ import Fitness from './components/Fitness.jsx';
 import Toeic from './components/Toeic.jsx';
 import Work from './components/Work.jsx';
 import Review from './components/Review.jsx';
+import Coach from './components/Coach.jsx';
 import HabitSheet from './components/HabitSheet.jsx';
 import SettingsSheet from './components/SettingsSheet.jsx';
 import ProfileSheet from './components/ProfileSheet.jsx';
@@ -29,6 +30,7 @@ function loadUser() {
 
 // Mục điều hướng. Trên điện thoại, nhóm "grow" gom các màn phát triển bản thân vào một thẻ.
 const GROW = [
+  { id: 'coach', icon: '🤖', label: 'PT ảo', desc: 'Hỏi đáp, kế hoạch tập và ăn' },
   { id: 'habits', icon: '✅', label: 'Thói quen', desc: 'Checklist, chuỗi ngày, lịch sử' },
   { id: 'fitness', icon: '🏋️', label: 'Thể hình', desc: 'Buổi tập, số đo, dinh dưỡng' },
   { id: 'toeic', icon: '🎧', label: 'TOEIC', desc: 'Bấm giờ, từ vựng, mock test' },
@@ -172,6 +174,7 @@ export default function App() {
 
       {tab === 'home' && <Dashboard D={D} user={user} onToggle={onToggle} onEdit={onEdit} go={go} onProfile={() => go('me')} />}
       {tab === 'schedule' && <Schedule D={D} onToggle={onToggle} onEdit={onEdit} onAdd={onAdd} reload={reload} flash={flash} />}
+      {tab === 'coach' && <Coach settings={settings} onBack={back} onSettings={() => setSettingsOpen(true)} />}
       {tab === 'habits' && <Habits D={D} onToggle={onToggle} onEdit={onEdit} onAdd={onAdd} onBack={back} />}
       {tab === 'fitness' && <Fitness D={D} onBack={back} onSettings={() => setSettingsOpen(true)} />}
       {tab === 'toeic' && <Toeic D={D} onBack={back} onSettings={() => setSettingsOpen(true)} />}

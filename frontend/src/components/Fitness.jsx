@@ -1,11 +1,13 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useLoad } from '../hooks.js';
 import { Columns, LineChart, Meter } from './charts.jsx';
 import { Empty, Field, Loading, PageHead, Seg, Sheet } from './ui.jsx';
 import WorkoutRunner from './WorkoutRunner.jsx';
 import ProgramSheet from './ProgramSheet.jsx';
-import { PROGRAM, dayForWeekday, estimateMinutes } from '../program.js';
+import ImportSheet from './ImportSheet.jsx';
+import { dayForWeekday, estimateMinutes, getProgram, hasSession } from '../program.js';
+import { downloadProgramXlsx } from '../excelProgram.js';
 import { WD_SHORT, addDays, fromISO, num1, startOfWeek, toISO, todayISO, withDefaults, wdIndex } from '../utils.js';
 
 const EXERCISES = ['Bench Press', 'Incline Dumbbell Press', 'Overhead Press', 'Lateral Raise', 'Pull-up', 'Lat Pulldown', 'Barbell Row', 'Squat', 'Romanian Deadlift', 'Leg Press', 'Barbell Curl', 'Triceps Pushdown', 'Plank'];
@@ -32,10 +34,20 @@ function Train({ goal }) {
   const { data: ws, reload, err } = useLoad(() => api.get('/api/workouts', { from: range(120)[0], to: range(0)[1] }), []);
   const [sheet, setSheet] = useState(null);
   const [ex, setEx] = useState('');
-  const [runDay, setRunDay] = useState(null);
+  const { data: progRes, err: progErr, reload: reloadProg } = useLoad(() => api.get('/api/program'), []);
+  const [runDay, setRunDay] = useState(null); // chỉ số buổi đang tập
   const [progOpen, setProgOpen] = useState(false);
-  const [pickIdx, setPickIdx] = useState(() => dayForWeekday(wdIndex(new Date()))?.idx ?? 0);
+  const [importOpen, setImportOpen] = useState(false);
+  const [pickIdx, setPickIdx] = useState(0);
   const [savedMsg, setSavedMsg] = useState('');
+  // Chương trình của người dùng (nhập từ Excel) nếu có, không thì bản mẫu
+  const program = useMemo(() => getProgram(progRes?.program || null), [progRes]);
+  // Mặc định chọn buổi đang tập dở (nếu có), không thì buổi theo thứ trong tuần
+  useEffect(() => {
+    const doing = program.days.findIndex((_, i) => hasSession(program, i, todayISO()));
+    const i = doing >= 0 ? doing : dayForWeekday(program, wdIndex(new Date()));
+    setPickIdx(i >= 0 ? i : 0);
+  }, [program]);
   const today = todayISO();
   const weekStart = startOfWeek(new Date());
 
@@ -64,7 +76,15 @@ function Train({ goal }) {
   };
 
   if (err) return <div className="err">{err}</div>;
-  if (!ws) return <Loading />;
+  if (!ws || (!progRes && !progErr)) return <Loading />;
+
+  const todayIdx = dayForWeekday(program, wdIndex(new Date()));
+  const pick = program.days[Math.min(pickIdx, program.days.length - 1)];
+  const exportDays = { days: program.days, extraNote: program.custom ? () => null : (it) => it.vi || null };
+  const resetToDefault = async () => {
+    if (!confirm('Dùng lại chương trình mẫu? Chương trình bạn đã nhập sẽ bị xóa (lịch sử buổi tập vẫn giữ nguyên).')) return;
+    try { await api.del('/api/program'); setProgOpen(false); setSavedMsg('Đã quay về chương trình mẫu.'); reloadProg(); } catch (e) { setSavedMsg(e.message); }
+  };
 
   return (
     <>
@@ -84,23 +104,17 @@ function Train({ goal }) {
 
       {savedMsg && <div className="tip" style={{ marginTop: 14 }}>{savedMsg}</div>}
       <div className="card pad progcard" style={{ marginTop: 14 }}>
-        <small>🎯 Chương trình tập</small>
-        <b>{dayForWeekday(wdIndex(new Date())) ? `Hôm nay: ${dayForWeekday(wdIndex(new Date())).title}` : 'Hôm nay nghỉ / đá banh ⚽'}</b>
-        <select className="input" value={pickIdx} onChange={(e) => setPickIdx(Number(e.target.value))}>
-          {PROGRAM.days.map((d) => <option key={d.idx} value={d.idx}>{WD_SHORT[d.idx]} · {d.title}</option>)}
+        <small>🎯 {program.custom ? `Chương trình của bạn: ${program.name}` : 'Chương trình tập'}</small>
+        <b>{todayIdx >= 0 ? `Hôm nay: ${program.days[todayIdx].title}` : program.days.every((d) => d.weekday === null) ? 'Chọn buổi bạn muốn tập hôm nay' : 'Hôm nay không có buổi theo chương trình ⚽'}</b>
+        <select className="input" value={Math.min(pickIdx, program.days.length - 1)} onChange={(e) => setPickIdx(Number(e.target.value))}>
+          {program.days.map((d, i) => <option key={i} value={i}>{d.weekday !== null ? `${WD_SHORT[d.weekday]} · ` : ''}{d.title}</option>)}
         </select>
-        {(() => {
-          const d = dayForWeekday(pickIdx);
-          let resume = false;
-          try { const r = JSON.parse(localStorage.getItem('cache:session')); resume = r && r.dayIdx === d.idx && r.date === today; } catch { /* bỏ qua */ }
-          return (
-            <>
-              <p>{d.items.length} bài · khoảng {estimateMinutes(d)} phút · {d.focus}</p>
-              <button className="btn" onClick={() => { setSavedMsg(''); setRunDay(d); }}>{resume ? '▶ Tiếp tục buổi đang tập' : '▶ Bắt đầu buổi tập'}</button>
-            </>
-          );
-        })()}
-        <button className="linkbtn" onClick={() => setProgOpen(true)}>Xem cả chương trình và hướng dẫn từng bài</button>
+        <p>{pick.items.length} bài · khoảng {estimateMinutes(pick)} phút{pick.focus ? ` · ${pick.focus}` : ''}</p>
+        <button className="btn" onClick={() => { setSavedMsg(''); setRunDay(pickIdx); }}>{hasSession(program, pickIdx, today) ? '▶ Tiếp tục buổi đang tập' : '▶ Bắt đầu buổi tập'}</button>
+        <div className="progtools">
+          <button className="linkbtn" onClick={() => setProgOpen(true)}>Xem cả chương trình</button>
+          <button className="linkbtn" onClick={() => setImportOpen(true)}>📥 Nhập từ Excel</button>
+        </div>
       </div>
       <button className="btn ghost" style={{ marginTop: 10 }} onClick={() => setSheet({ done_on: today, name: goal.gym_plan?.[wdIndex(new Date())] || '' })}>+ Tự ghi buổi tập</button>
 
@@ -144,8 +158,24 @@ function Train({ goal }) {
       )}
       <div className="tip" style={{ marginTop: 14 }}>💤 Cơ bắp phát triển lúc nghỉ ngơi. Ngủ đủ 7–9 giờ và có ít nhất một ngày nghỉ mỗi tuần.</div>
 
-      {runDay && <WorkoutRunner day={runDay} workouts={ws} onClose={() => setRunDay(null)} onSaved={(n) => { setRunDay(null); setSavedMsg(`Đã lưu buổi tập: ${n} hiệp. Giỏi lắm! 💪`); reload(); }} />}
-      {progOpen && <ProgramSheet onClose={() => setProgOpen(false)} onStart={(d) => { setProgOpen(false); setPickIdx(d.idx); setSavedMsg(''); setRunDay(d); }} />}
+      {runDay !== null && <WorkoutRunner program={program} dayIdx={runDay} workouts={ws} onClose={() => setRunDay(null)} onSaved={(n) => { setRunDay(null); setSavedMsg(`Đã lưu buổi tập: ${n} hiệp. Giỏi lắm! 💪`); reload(); }} />}
+      {progOpen && (
+        <ProgramSheet
+          program={program}
+          onClose={() => setProgOpen(false)}
+          onStart={(i) => { setProgOpen(false); setPickIdx(i); setSavedMsg(''); setRunDay(i); }}
+          onImport={() => { setProgOpen(false); setImportOpen(true); }}
+          onExport={() => downloadProgramXlsx(exportDays.days, program.custom ? 'chuong-trinh-cua-toi.xlsx' : 'chuong-trinh-tap-mau.xlsx', exportDays.extraNote)}
+          onReset={resetToDefault}
+        />
+      )}
+      {importOpen && (
+        <ImportSheet
+          templateDays={exportDays}
+          onClose={() => setImportOpen(false)}
+          onImported={(p) => { setImportOpen(false); setSavedMsg(`Đã dùng chương trình "${p.name}": ${p.days.length} buổi. Mở lên là tập theo!`); reloadProg(); }}
+        />
+      )}
       {sheet && <WorkoutSheet initial={sheet} names={[...new Set([...names, ...EXERCISES])]} lastSets={lastSets} onClose={() => setSheet(null)} onSaved={() => { setSheet(null); reload(); }} />}
     </>
   );

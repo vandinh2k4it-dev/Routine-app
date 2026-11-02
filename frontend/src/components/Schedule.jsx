@@ -253,7 +253,7 @@ function TemplateSheet({ date, dayItems, habitCount, onClose, onDone }) {
   };
   const seed = () => {
     if (habitCount && !confirm('Thêm lịch sinh hoạt mẫu vào lịch hiện tại? Các việc đang có vẫn được giữ.')) return;
-    run(() => api.bulkHabits([...SAMPLE_ROUTINE, ...SAMPLE_HABITS]), 'Đã nạp lịch sinh hoạt mẫu, bạn có thể sửa từng mục');
+    run(() => api.bulkHabits([...SAMPLE_ROUTINE, ...SAMPLE_HABITS].map((h) => ({ ...h, start_date: todayISO() }))), 'Đã nạp lịch sinh hoạt mẫu, bạn có thể sửa từng mục');
   };
   return (
     <Sheet title="Lịch mẫu" onClose={onClose}>

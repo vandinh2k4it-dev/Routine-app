@@ -41,6 +41,13 @@ Phát triển → **PT ảo**. Mỗi lần bạn nhắn, server gom dữ liệu 
 ## Chương trình tập
 Thể hình → Tập luyện → **Bắt đầu buổi tập**. Chương trình mẫu "Slim-fit V-taper 5 ngày" (T2–T6; ngực+tay, lưng+vai, chân+bụng, vai+tay, ngực+lưng) nằm trong `frontend/src/program.js`: sửa số hiệp, reps, thời gian nghỉ hoặc thêm bài ở đó. Màn tập đi từng bài, nhập kg và reps rồi tick, đồng hồ nghỉ tự chạy, gợi ý tăng tạ khi lần trước đủ reps tối đa ở mọi hiệp (double progression). Tiến độ buổi đang tập được giữ trên máy, tải lại trang vẫn tiếp tục được. Đây là mẫu khởi đầu dựa trên các nguyên tắc phổ biến, không phải đơn thuốc.
 
+## Tự soạn chương trình tập bằng Excel
+Thể hình → Tập luyện → **Nhập từ Excel**. Soạn file .xlsx (hoặc .csv) với các cột **Ngày, Buổi, Bài tập, Số hiệp, Reps, Nghỉ (giây), Tạ (kg), Ghi chú, Link video**, mỗi dòng một bài. Bấm **Tải file mẫu** trong app để có sẵn khung. App đọc file ngay trên máy bạn, cho xem trước và cảnh báo chỗ nào không đọc được, rồi mới lưu. Từ đó mở lên là thấy bài nào, mấy hiệp, bao nhiêu reps, nghỉ bao lâu.
+- Ô Ngày/Buổi chỉ cần ghi ở dòng đầu của buổi; dòng dưới để trống. Ngày ghi T2…T7/CN để app biết hôm nay tập buổi nào; bỏ trống thì tự chọn buổi khi tập.
+- Reps ghi 10 hoặc 8-12; bài tính giờ ghi 45s hoặc 40-60s. Nên đặt cột Reps dạng Text vì Excel hay tự đổi 8-12 thành ngày (app vẫn đọc lại được và nhắc bạn).
+- Tên bài trùng thư viện (Bench Press, Lat Pulldown…) thì có thêm gợi ý kỹ thuật và video; bài khác vẫn tập bình thường.
+- Chương trình lưu trong bảng `user_programs` (mỗi người một chương trình). Có thể xuất ra Excel, hoặc quay lại chương trình mẫu bất cứ lúc nào.
+
 ## Giới hạn hiện tại
 - **Nhắc nhở** chỉ hiện khi app đang mở hoặc chạy nền (kiểm tra mỗi 30 giây). Muốn nhắc khi tắt hẳn app cần Web Push từ máy chủ (chưa làm). Trên iPhone cần thêm app vào Màn hình chính (iOS 16.4+).
 - Chưa có ảnh body progress, chưa tích hợp GitHub/portfolio.

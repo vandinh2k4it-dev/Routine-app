@@ -24,7 +24,7 @@ const addDays = (iso, n) => new Date(new Date(iso + 'T00:00:00Z').getTime() + n 
 
 async function loadContext(uid, today) {
   const from7 = addDays(today, -6), from21 = addDays(today, -20), from120 = addDays(today, -120);
-  const [settings, workouts, body, nutrition, sleep, habits, logs, time] = await Promise.all([
+  const [settings, workouts, body, nutrition, sleep, habits, logs, time, program] = await Promise.all([
     pool.query('SELECT data FROM user_settings WHERE user_id=$1', [uid]),
     pool.query(`SELECT to_char(w.done_on,'YYYY-MM-DD') AS d, w.name,
         COALESCE(json_agg(json_build_object('e', s.exercise, 'r', s.reps, 'w', s.weight::float8) ORDER BY s.id) FILTER (WHERE s.id IS NOT NULL), '[]') AS sets
@@ -39,8 +39,9 @@ async function loadContext(uid, today) {
     pool.query(`SELECT id, title, kind, start_time, end_time, days, once_on, to_char(start_date,'YYYY-MM-DD') AS start_date FROM habits WHERE user_id=$1 AND NOT archived ORDER BY start_time NULLS LAST, id LIMIT 80`, [uid]),
     pool.query(`SELECT habit_id, COUNT(*)::int AS n FROM habit_logs WHERE user_id=$1 AND done_on BETWEEN $2 AND $3 GROUP BY habit_id`, [uid, from7, today]),
     pool.query(`SELECT kind, SUM(minutes)::int AS m FROM time_logs WHERE user_id=$1 AND logged_on BETWEEN $2 AND $3 GROUP BY kind`, [uid, from7, today]),
+    pool.query('SELECT name, data FROM user_programs WHERE user_id=$1', [uid]),
   ]);
-  return { s: settings.rows[0]?.data || {}, workouts: workouts.rows, body: body.rows, nutrition: nutrition.rows, sleep: sleep.rows, habits: habits.rows, logs: logs.rows, time: time.rows };
+  return { s: settings.rows[0]?.data || {}, workouts: workouts.rows, body: body.rows, nutrition: nutrition.rows, sleep: sleep.rows, habits: habits.rows, logs: logs.rows, time: time.rows, program: program.rows[0] || null };
 }
 
 function scheduledOn(h, iso) {
@@ -59,6 +60,19 @@ function buildContext(c, today) {
   if (targets.length) L.push(`Mục tiêu mỗi ngày: ${targets.join(', ')}`);
   if (s.bed || s.wake) L.push(`Giờ ngủ mục tiêu: ngủ ${s.bed || '—'}, dậy ${s.wake || '—'}`);
   if (s.gym_plan && Object.keys(s.gym_plan).length) L.push(`Lịch tập trong tuần: ${WD.map((w, i) => `${w}: ${s.gym_plan[i] || 'nghỉ'}`).join('; ')}`);
+
+  if (c.program) {
+    const days = c.program.data.days || [];
+    L.push('', `Chương trình tập người dùng tự soạn: "${c.program.name}"`);
+    for (const d of days) {
+      const wd = d.weekday === null || d.weekday === undefined ? '' : `${WD[d.weekday]}: `;
+      L.push(`- ${wd}${d.title}: ${d.items.map((x) => `${x.name} ${x.sets}x${x.reps[0] === x.reps[1] ? x.reps[0] : x.reps[0] + '-' + x.reps[1]}${x.timed ? 's' : ''}${x.weight ? ' @' + x.weight + 'kg' : ''}`).join('; ')}`);
+    }
+    const t = days.find((d) => d.weekday === wdIndex(today));
+    L.push(t ? `Buổi theo chương trình hôm nay: ${t.title}.` : 'Hôm nay không có buổi nào theo chương trình (ngày nghỉ hoặc chưa gán ngày).');
+  } else {
+    L.push('', 'Người dùng chưa nhập chương trình riêng; app đang dùng chương trình mẫu "Slim-fit V-taper 5 ngày" (T2 ngực+tay, T3 lưng+vai, T4 chân+bụng, T5 vai+tay, T6 ngực+lưng).');
+  }
 
   L.push('', 'Số đo cơ thể (mới nhất trước):');
   if (!c.body.length) L.push('- chưa có');

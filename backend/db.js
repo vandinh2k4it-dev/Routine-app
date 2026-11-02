@@ -185,6 +185,14 @@ CREATE TABLE IF NOT EXISTS income (
   note TEXT
 );
 
+-- Chương trình tập do người dùng tự soạn (nhập từ Excel); mỗi người một chương trình
+CREATE TABLE IF NOT EXISTS user_programs (
+  user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  data JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS week_reviews (
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   week_start DATE NOT NULL,
@@ -200,6 +208,7 @@ let dbReady = null;
 async function initDb() {
   const chk = await pool.query(`
     SELECT to_regclass('public.week_reviews') IS NOT NULL
+       AND to_regclass('public.user_programs') IS NOT NULL
        AND to_regclass('public.users') IS NOT NULL
        AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'habits' AND column_name = 'once_on')
        AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'body_metrics' AND column_name = 'bmr') AS ok`);

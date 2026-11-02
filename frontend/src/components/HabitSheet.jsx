@@ -50,6 +50,7 @@ export default function HabitSheet({ initial, ctx, defaultKind = 'block', onClos
       start_time: isBlock ? start || null : null, end_time: isBlock ? end || null : null,
       remind_before: isBlock && start && remind !== '' ? Number(remind) : null,
       note: note.trim() || null,
+      ...(editing ? {} : { start_date: todayISO() }), // ngày bắt đầu theo giờ máy, không theo giờ server
     };
     run(() => (editing ? api.updateHabit(initial.id, body) : api.createHabit(body)), editing ? 'Đã cập nhật' : 'Đã thêm');
   }

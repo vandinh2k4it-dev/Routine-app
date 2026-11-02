@@ -218,8 +218,7 @@ export function sleepOnTime(s, goal) {
 }
 
 export const DEFAULT_SETTINGS = {
-  bed: '23:30', wake: '07:30', toeic_target: 600, calories: 2500, protein: 130, carbs: 300, fat: 70, water: 2500,
-  gym_plan: { 0: 'Ngực + Tay', 1: 'Lưng + Vai', 2: 'Chân', 3: 'Vai + Tay', 4: 'Ngực + Lưng', 5: 'Đá banh' },
+  bed: '23:30', wake: '07:30', calories: 2500, protein: 130, carbs: 300, fat: 70, water: 2500,
 };
 export const withDefaults = (s) => ({ ...DEFAULT_SETTINGS, ...(s || {}) });
 

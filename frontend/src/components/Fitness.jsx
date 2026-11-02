@@ -6,6 +6,7 @@ import { Empty, Field, Loading, PageHead, Seg, Sheet } from './ui.jsx';
 import WorkoutRunner from './WorkoutRunner.jsx';
 import ProgramSheet from './ProgramSheet.jsx';
 import ImportSheet from './ImportSheet.jsx';
+import { shrinkImage } from '../image.js';
 import { dayForWeekday, estimateMinutes, getProgram, hasSession } from '../program.js';
 import { downloadProgramXlsx } from '../excelProgram.js';
 import { WD_SHORT, addDays, fromISO, num1, startOfWeek, toISO, todayISO, withDefaults, wdIndex } from '../utils.js';
@@ -15,14 +16,14 @@ const ymd = (iso) => { const d = fromISO(iso); return `${d.getDate()}/${d.getMon
 const range = (days) => [toISO(addDays(new Date(), -days)), toISO(addDays(new Date(), 1))];
 const e1rm = (w, r) => w * (1 + r / 30);
 
-export default function Fitness({ D, onBack, onSettings }) {
+export default function Fitness({ D, onBack, onSettings, onPlan }) {
   const [tab, setTab] = useState('train');
   const goal = withDefaults(D.settings);
   return (
     <div className="page">
-      <PageHead title="Thể hình" onBack={onBack} right={<button className="chip" onClick={onSettings}>🎯 Mục tiêu</button>} />
+      <PageHead title="Tập luyện" onBack={onBack} right={<button className="chip" onClick={onSettings}>🎯 Hồ sơ</button>} />
       <Seg value={tab} onChange={setTab} options={[['train', '🏋️ Tập luyện'], ['body', '📏 Cơ thể'], ['food', '🥗 Dinh dưỡng']]} />
-      {tab === 'train' && <Train goal={goal} />}
+      {tab === 'train' && <Train goal={goal} onPlan={onPlan} />}
       {tab === 'body' && <Body goal={goal} />}
       {tab === 'food' && <Food goal={goal} />}
     </div>
@@ -30,7 +31,7 @@ export default function Fitness({ D, onBack, onSettings }) {
 }
 
 // ---------------- Tập luyện ----------------
-function Train({ goal }) {
+function Train({ goal, onPlan }) {
   const { data: ws, reload, err } = useLoad(() => api.get('/api/workouts', { from: range(120)[0], to: range(0)[1] }), []);
   const [sheet, setSheet] = useState(null);
   const [ex, setEx] = useState('');
@@ -96,7 +97,7 @@ function Train({ goal }) {
             <div key={w} className={'wp' + (d === today ? ' today' : '') + (did ? ' did' : '')}>
               <small>{w}</small>
               <b>{did ? '✓' : ''}</b>
-              <span>{goal.gym_plan?.[i] || 'Nghỉ'}</span>
+              <span>{program.days.find((d) => d.weekday === i)?.title || 'Nghỉ'}</span>
             </div>
           );
         })}
@@ -114,9 +115,10 @@ function Train({ goal }) {
         <div className="progtools">
           <button className="linkbtn" onClick={() => setProgOpen(true)}>Xem cả chương trình</button>
           <button className="linkbtn" onClick={() => setImportOpen(true)}>📥 Nhập từ Excel</button>
+          {onPlan && <button className="linkbtn" onClick={onPlan}>🤖 Lộ trình AI</button>}
         </div>
       </div>
-      <button className="btn ghost" style={{ marginTop: 10 }} onClick={() => setSheet({ done_on: today, name: goal.gym_plan?.[wdIndex(new Date())] || '' })}>+ Tự ghi buổi tập</button>
+      <button className="btn ghost" style={{ marginTop: 10 }} onClick={() => setSheet({ done_on: today, name: program.days[dayForWeekday(program, wdIndex(new Date()))]?.title || '' })}>+ Tự ghi buổi tập</button>
 
       <div className="section-title">Progressive overload</div>
       {!names.length ? (
@@ -267,19 +269,6 @@ const METRICS = [
   ['waist', 'Vòng eo', 'cm'], ['chest', 'Vòng ngực', 'cm'], ['arm', 'Vòng tay', 'cm'], ['shoulder', 'Vòng vai', 'cm'],
 ];
 const SCAN_KEYS = ['weight', 'body_fat', 'muscle_mass', 'fat_mass', 'bmi', 'visceral_fat', 'bmr'];
-
-/** Thu nhỏ ảnh về tối đa 1600px, JPEG 85%: đủ rõ để đọc chữ số, nhẹ để gửi nhanh. */
-async function shrinkImage(file) {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Không mở được ảnh này')); i.src = url; });
-    const k = Math.min(1, 1600 / Math.max(img.width, img.height));
-    const c = document.createElement('canvas');
-    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    return c.toDataURL('image/jpeg', 0.85);
-  } finally { URL.revokeObjectURL(url); }
-}
 
 function Body({ goal }) {
   const { data: rows, reload, err } = useLoad(() => api.get('/api/body', { from: range(365)[0], to: range(0)[1] }), []);

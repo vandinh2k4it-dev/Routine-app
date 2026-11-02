@@ -82,23 +82,23 @@ function parseJson(text) {
   try { return JSON.parse(text); } catch { throw new AiError(502, 'AI trả về kết quả không đọc được, thử lại'); }
 }
 
-/** Đọc một ảnh và trả về JSON theo schema. image = { mime, data (base64) }. */
-async function generateJson({ system, userText, image, geminiSchema, claudeSchema }) {
+/** Trả về JSON theo schema. image (tùy chọn) = { mime, data (base64) }. */
+async function generateJson({ system, userText, image, geminiSchema, claudeSchema, maxTokens = 8000, effort = 'low' }) {
   const p = which();
   if (p === 'gemini') {
     const text = await geminiCall({
       systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: 'user', parts: [{ inline_data: { mime_type: image.mime, data: image.data } }, { text: userText }] }],
-      generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: geminiSchema },
+      contents: [{ role: 'user', parts: [...(image ? [{ inline_data: { mime_type: image.mime, data: image.data } }] : []), { text: userText }] }],
+      generationConfig: { temperature: image ? 0 : 0.5, maxOutputTokens: maxTokens, responseMimeType: 'application/json', responseSchema: geminiSchema },
     });
     return parseJson(text);
   }
   if (p === 'claude') {
     const text = await claudeCall({
-      max_tokens: 8000,
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: claudeSchema } },
+      max_tokens: maxTokens,
+      output_config: { effort, format: { type: 'json_schema', schema: claudeSchema } },
       system,
-      messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: image.mime, data: image.data } }, { type: 'text', text: userText }] }],
+      messages: [{ role: 'user', content: [...(image ? [{ type: 'image', source: { type: 'base64', media_type: image.mime, data: image.data } }] : []), { type: 'text', text: userText }] }],
     });
     return parseJson(text);
   }

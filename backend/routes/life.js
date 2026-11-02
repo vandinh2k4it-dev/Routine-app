@@ -10,6 +10,13 @@ const SETTINGS_KEYS = {
   calories: 'int', protein: 'int', carbs: 'int', fat: 'int', water: 'int',
   weight_goal: 'num', gym_plan: 'plan',
   height: 'int', age: 'int', sex: 'sex', goal_note: 'text',
+  // Khảo sát ban đầu
+  goal: 'goal', experience: 'experience', equipment: 'equipment', days_per_week: 'days', session_min: 'minutes', injuries: 'text', onboarded: 'date', meal_plan: 'longtext',
+};
+const ENUMS = {
+  goal: ['fat_loss', 'muscle_gain', 'recomp', 'fit'],
+  experience: ['beginner', 'intermediate', 'advanced'],
+  equipment: ['gym', 'home', 'dumbbell'],
 };
 r.get('/settings', auth, wrap(async (req, res) => {
   const q = await pool.query('SELECT data FROM user_settings WHERE user_id=$1', [req.user.id]);
@@ -25,7 +32,11 @@ r.put('/settings', auth, wrap(async (req, res) => {
     if (t === 'time' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) out[k] = v;
     else if (t === 'date' && isDate(v)) out[k] = v;
     else if ((t === 'int' || t === 'num') && Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) < 1e6) out[k] = Number(v);
+    else if (ENUMS[k] && ENUMS[k].includes(v)) out[k] = v;
+    else if (t === 'days' && Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 7) out[k] = Number(v);
+    else if (t === 'minutes' && Number.isInteger(Number(v)) && Number(v) >= 15 && Number(v) <= 240) out[k] = Number(v);
     else if (t === 'sex' && ['male', 'female', 'other'].includes(v)) out[k] = v;
+    else if (t === 'longtext' && typeof v === 'string' && v.trim().length <= 1500) out[k] = v.trim();
     else if (t === 'text' && typeof v === 'string' && v.trim().length <= 300) out[k] = v.trim();
     else if (t === 'plan' && v && typeof v === 'object' && !Array.isArray(v)) {
       // gym_plan: { '0'..'6': 'tên buổi tập' }

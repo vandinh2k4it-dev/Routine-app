@@ -108,6 +108,7 @@ app.use('/api', require('./routes/habits'));
 app.use('/api', require('./routes/life'));
 app.use('/api', require('./routes/ai'));
 app.use('/api', require('./routes/coach'));
+app.use('/api', require('./routes/plan'));
 app.use('/api', require('./routes/program'));
 
 app.use((err, _req, res, _next) => {

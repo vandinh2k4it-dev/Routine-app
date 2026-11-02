@@ -18,7 +18,7 @@ function buildQs(params) {
   return entries.length ? '?' + new URLSearchParams(entries).toString() : '';
 }
 const cacheKey = (path, params) => PREFIX + path + buildQs(params);
-const cacheable = (path) => path.startsWith('/api/habits') || path.startsWith('/api/logs');
+const cacheable = (path) => path === '/api/habits' || path === '/api/logs' || path === '/api/settings';
 
 function peek(path, params) {
   try {
@@ -65,21 +65,39 @@ async function req(path, { method = 'GET', body, params } = {}) {
 }
 
 export const api = {
+  // Tài khoản
   register: (username, password, display_name, avatar) =>
     req('/api/auth/register', { method: 'POST', body: { username, password, display_name, avatar } }),
   login: (username, password) => req('/api/auth/login', { method: 'POST', body: { username, password } }),
   me: () => req('/api/me'),
   updateMe: (body) => req('/api/me', { method: 'PUT', body }),
+
+  // Lịch & thói quen
   habits: () => req('/api/habits'),
   createHabit: (h) => req('/api/habits', { method: 'POST', body: h }),
+  bulkHabits: (items) => req('/api/habits/bulk', { method: 'POST', body: { items } }),
   updateHabit: (id, h) => req(`/api/habits/${id}`, { method: 'PUT', body: h }),
   removeHabit: (id) => req(`/api/habits/${id}`, { method: 'DELETE' }),
   logs: (from, to) => req('/api/logs', { params: { from, to } }),
   setDone: (habit_id, date, done) => req('/api/logs', { method: 'PUT', body: { habit_id, date, done } }),
+  exceptions: (from, to) => req('/api/habit-exceptions', { params: { from, to } }),
+  setException: (b) => req('/api/habit-exceptions', { method: 'PUT', body: b }),
+  clearException: (habit_id, date) => req('/api/habit-exceptions', { method: 'DELETE', params: { habit_id, date } }),
+
+  settings: () => req('/api/settings'),
+  saveSettings: (b) => req('/api/settings', { method: 'PUT', body: b }),
+  bundle: (from, to) => req('/api/bundle', { params: { from, to } }),
+
+  // Truy cập chung cho các module (thể hình, TOEIC, công việc…)
+  get: (path, params) => req(path, { params }),
+  post: (path, body) => req(path, { method: 'POST', body }),
+  put: (path, body) => req(path, { method: 'PUT', body }),
+  del: (path, params) => req(path, { method: 'DELETE', params }),
 };
 
 /** Đọc dữ liệu đã cache (đồng bộ). Khóa phải khớp đúng tham số của lần gọi api tương ứng. */
 export const cached = {
   habits: () => peek('/api/habits'),
   logs: (from, to) => peek('/api/logs', { from, to }),
+  settings: () => peek('/api/settings'),
 };

@@ -1,4 +1,4 @@
-import { isScheduled, logKey, minutesOf, todayISO, toLogSet } from './utils.js';
+import { itemsOn, logKey, minutesOf, todayISO, toLogSet } from './utils.js';
 
 // Nhắc nhở chạy ngay trong app: kiểm tra mỗi 30 giây khi app đang mở (hoặc nằm nền chưa bị hệ điều hành đóng).
 // Muốn nhắc cả khi đã tắt hẳn app thì cần Web Push từ máy chủ (chưa làm).
@@ -44,14 +44,14 @@ const markSent = (k) => {
  * Tìm các hoạt động đến giờ nhắc mà chưa xong. Gọi `onDue(habit)` cho từng cái (để hiện toast trong app),
  * đồng thời bắn thông báo hệ thống nếu đã được cấp quyền.
  */
-export function checkReminders(habits, logs, onDue) {
+export function checkReminders(habits, exMap, logs, onDue) {
   const now = new Date();
   const iso = todayISO();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const done = toLogSet(logs);
-  for (const h of habits) {
-    if (h.remind_before === null || h.remind_before === undefined || !h.start_time) continue;
-    if (!isScheduled(h, now) || done.has(logKey(h.id, iso))) continue;
+  for (const h of itemsOn(habits, exMap, now)) {
+    if (h.kind === 'habit' || h.remind_before === null || h.remind_before === undefined || !h.start_time) continue;
+    if (done.has(logKey(h.id, iso))) continue;
     const start = minutesOf(h.start_time);
     const at = start - h.remind_before;
     // đến giờ nhắc và chưa quá 2 tiếng sau giờ bắt đầu (mở app muộn thì không dồn thông báo cũ)

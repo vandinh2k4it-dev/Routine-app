@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
+import ExerciseDemo from './ExerciseDemo.jsx';
 import { SESSION_KEY, itemFromLib, sessionSig, suggest, videoUrl } from '../program.js';
 import { todayISO } from '../utils.js';
 
@@ -112,6 +113,7 @@ export default function WorkoutRunner({ program, dayIdx, workouts, onClose, onSa
             <span className="hchip on">{item.sets} hiệp × {item.reps[0] === item.reps[1] ? item.reps[0] : `${item.reps[0]}–${item.reps[1]}`} {timed ? 'giây' : 'reps'}</span>
             <span className="hchip on">Nghỉ {mmss(item.rest)}</span>
           </div>
+          <ExerciseDemo key={item.key} item={item} />
           {item.note && <div className="pnote">📝 {item.note}</div>}
           {item.cues.length > 0 && <ul className="cues">{item.cues.map((c, k) => <li key={k}>{c}</li>)}</ul>}
           <div className="rlinks">

@@ -174,3 +174,18 @@ export function hasSession(program, dayIdx, today) {
     return !!(s && d && s.v === 2 && s.date === today && s.sig === sessionSig(program, d));
   } catch { return false; }
 }
+
+// Ảnh minh họa 2 tư thế (đầu/cuối) từ free-exercise-db (public domain), khóa theo id thư viện
+const DEMO_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
+const DEMO = {
+  bench: 'Barbell_Bench_Press_-_Medium_Grip', db_bench: 'Dumbbell_Bench_Press', incline_db: 'Incline_Dumbbell_Press', incline_bb: 'Barbell_Incline_Bench_Press_-_Medium_Grip',
+  chest_press: 'Leverage_Chest_Press', cable_fly: 'Cable_Crossover', pec_deck: 'Butterfly', pushdown: 'Triceps_Pushdown', oh_ext: 'Cable_Rope_Overhead_Triceps_Extension',
+  skull: 'EZ-Bar_Skullcrusher', ez_curl: 'EZ-Bar_Curl', db_curl: 'Dumbbell_Bicep_Curl', hammer: 'Hammer_Curls', incline_curl: 'Incline_Dumbbell_Curl',
+  cable_curl: 'Standing_Biceps_Cable_Curl', pulldown: 'Wide-Grip_Lat_Pulldown', pullup: 'Pullups', cg_pulldown: 'Close-Grip_Front_Lat_Pulldown',
+  seated_row: 'Seated_Cable_Rows', cs_row: 'Incline_Bench_Pull', sa_pulldown: 'Straight-Arm_Pulldown', ohp: 'Standing_Military_Press', db_press: 'Dumbbell_Shoulder_Press',
+  lateral: 'Side_Lateral_Raise', cable_lateral: 'Cable_Seated_Lateral_Raise', face_pull: 'Face_Pull', rear_fly: 'Reverse_Flyes', squat: 'Barbell_Squat',
+  leg_press: 'Leg_Press', rdl: 'Romanian_Deadlift', leg_curl: 'Lying_Leg_Curls', calf: 'Standing_Calf_Raises', knee_raise: 'Hanging_Leg_Raise',
+  cable_crunch: 'Cable_Crunch', plank: 'Plank',
+};
+/** [ảnh tư thế đầu, ảnh tư thế cuối] hoặc null nếu bài không có trong thư viện. */
+export const demoImages = (item) => (item.libId && DEMO[item.libId] ? [0, 1].map((n) => `${DEMO_BASE}${DEMO[item.libId]}/${n}.jpg`) : null);

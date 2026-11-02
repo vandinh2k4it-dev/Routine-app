@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ExerciseDemo from './ExerciseDemo.jsx';
 import { estimateMinutes, videoUrl, weeklySets } from '../program.js';
 import { WD_SHORT } from '../utils.js';
 import { Sheet } from './ui.jsx';
@@ -49,6 +50,7 @@ export default function ProgramSheet({ program, onClose, onStart, onImport, onEx
                 </button>
                 {open === id && (
                   <div className="progcues">
+                    <ExerciseDemo item={x} />
                     {x.note && <div className="pnote">📝 {x.note}</div>}
                     {x.cues.length > 0 && <ul>{x.cues.map((c, k) => <li key={k}>{c}</li>)}</ul>}
                     {!hasMore && <div className="hint" style={{ margin: '0 0 6px' }}>Nghỉ {x.rest} giây giữa các hiệp.</div>}

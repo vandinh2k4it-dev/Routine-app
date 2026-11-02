@@ -169,3 +169,6 @@ textarea.input { resize: none; font-family: inherit; }
 }
 
 .check { border-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+
+.btn.scan { background: color-mix(in srgb, var(--brand) 14%, var(--card)); color: var(--brand); box-shadow: none; border: 1.5px solid var(--brand); }
+.btn-row > .btn { flex: 1; margin-top: 0; }

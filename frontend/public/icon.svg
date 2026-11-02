@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a77bff"/>
+      <stop offset=".5" stop-color="#5b3df5"/>
+      <stop offset="1" stop-color="#241676"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".85" cy=".1" r=".75">
+      <stop offset="0" stop-color="#ff6bc6" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ff6bc6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx=".1" cy=".95" r=".7">
+      <stop offset="0" stop-color="#3fa9f5" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#3fa9f5" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe28a"/>
+      <stop offset="1" stop-color="#ff8fd8"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#150a50" flood-opacity=".45"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+  <rect width="512" height="512" fill="url(#glow2)"/>
+  <!-- vòng tiến độ -->
+  <g filter="url(#soft)">
+    <circle cx="256" cy="256" r="136" fill="none" stroke="#ffffff" stroke-opacity=".2" stroke-width="40"/>
+    <circle cx="256" cy="256" r="136" fill="none" stroke="url(#ring)" stroke-width="40" stroke-linecap="round"
+            stroke-dasharray="641 854" transform="rotate(-90 256 256)"/>
+    <!-- dấu tick -->
+    <path d="M196 262 L240 306 L322 212" fill="none" stroke="#ffffff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- lấp lánh -->
+  <path d="M400 112 l8 22 22 8 -22 8 -8 22 -8 -22 -22 -8 22 -8z" fill="#fff" fill-opacity=".9"/>
+  <circle cx="118" cy="398" r="8" fill="#fff" fill-opacity=".55"/>
+</svg>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useLoad } from '../hooks.js';
 import { Columns, LineChart, Meter } from './charts.jsx';
@@ -203,27 +203,65 @@ function WorkoutSheet({ initial, names, lastSets, onClose, onSaved }) {
 
 // ---------------- Cơ thể ----------------
 const METRICS = [
-  ['weight', 'Cân nặng', 'kg'], ['body_fat', 'Body fat', '%'], ['waist', 'Vòng eo', 'cm'],
-  ['chest', 'Vòng ngực', 'cm'], ['arm', 'Vòng tay', 'cm'], ['shoulder', 'Vòng vai', 'cm'],
+  ['weight', 'Cân nặng', 'kg'], ['body_fat', 'Body fat', '%'], ['muscle_mass', 'Khối lượng cơ', 'kg'],
+  ['fat_mass', 'Khối lượng mỡ', 'kg'], ['bmi', 'BMI', ''], ['visceral_fat', 'Mỡ nội tạng', ''], ['bmr', 'BMR', 'kcal'],
+  ['waist', 'Vòng eo', 'cm'], ['chest', 'Vòng ngực', 'cm'], ['arm', 'Vòng tay', 'cm'], ['shoulder', 'Vòng vai', 'cm'],
 ];
+const SCAN_KEYS = ['weight', 'body_fat', 'muscle_mass', 'fat_mass', 'bmi', 'visceral_fat', 'bmr'];
+
+/** Thu nhỏ ảnh về tối đa 1600px, JPEG 85%: đủ rõ để đọc chữ số, nhẹ để gửi nhanh. */
+async function shrinkImage(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Không mở được ảnh này')); i.src = url; });
+    const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.85);
+  } finally { URL.revokeObjectURL(url); }
+}
 
 function Body({ goal }) {
   const { data: rows, reload, err } = useLoad(() => api.get('/api/body', { from: range(365)[0], to: range(0)[1] }), []);
   const [metric, setMetric] = useState('weight');
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); // false | true | { prefill }
+  const [scanning, setScanning] = useState(false);
+  const [scanErr, setScanErr] = useState('');
+  const fileRef = useRef(null);
   if (err) return <div className="err">{err}</div>;
   if (!rows) return <Loading />;
   const [, label, unit] = METRICS.find((m) => m[0] === metric);
+
+  async function onPick(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setScanErr(''); setScanning(true);
+    try {
+      const image = await shrinkImage(file);
+      const r = await api.post('/api/ai/inbody', { image });
+      if (!r.is_body_report) throw new Error('Ảnh này không giống phiếu đo InBody. Hãy chụp rõ cả tờ phiếu rồi thử lại.');
+      setOpen({ prefill: r });
+    } catch (e2) { setScanErr(e2.message); }
+    setScanning(false);
+  }
   const pts = rows.filter((r) => r[metric] !== null).map((r) => ({ x: ymd(r.on_date), y: r[metric] }));
   const latest = (k) => [...rows].reverse().find((r) => r[k] !== null)?.[k] ?? null;
   const first = (k) => rows.find((r) => r[k] !== null)?.[k] ?? null;
 
   return (
     <>
-      <button className="btn" onClick={() => setOpen(true)}>+ Ghi số đo</button>
+      <div className="btn-row" style={{ marginTop: 0 }}>
+        <button className="btn" onClick={() => setOpen(true)}>+ Ghi số đo</button>
+        <button className="btn ghost scan" disabled={scanning} onClick={() => fileRef.current?.click()}>{scanning ? 'AI đang đọc…' : '📷 Quét phiếu InBody'}</button>
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPick} />
+      </div>
+      {scanning && <div className="hint light" style={{ textAlign: 'center' }}>Đang gửi ảnh cho AI đọc, khoảng 10–20 giây…</div>}
+      {scanErr && <div className="err" style={{ marginTop: 10 }}>{scanErr}</div>}
       <div className="card pad" style={{ marginTop: 14 }}>
         <div className="chips-wrap tight">
-          {METRICS.map(([k, l]) => <button key={k} className={'hchip' + (metric === k ? ' on' : '')} onClick={() => setMetric(k)}>{l}</button>)}
+          {METRICS.filter(([k]) => k === 'weight' || latest(k) !== null).map(([k, l]) => <button key={k} className={'hchip' + (metric === k ? ' on' : '')} onClick={() => setMetric(k)}>{l}</button>)}
         </div>
         <div style={{ marginTop: 10 }}><LineChart points={pts} unit={unit} color="#6d4aff" /></div>
         {metric === 'weight' && goal.weight_goal && latest('weight') !== null && (
@@ -232,7 +270,7 @@ function Body({ goal }) {
       </div>
       <div className="section-title">Hiện tại so với lúc bắt đầu</div>
       <div className="card">
-        {METRICS.map(([k, l, u]) => {
+        {METRICS.filter(([k]) => latest(k) !== null).map(([k, l, u]) => {
           const a = latest(k), b = first(k);
           const diff = a !== null && b !== null ? a - b : null;
           return (
@@ -245,14 +283,15 @@ function Body({ goal }) {
         })}
       </div>
       <div className="hint light" style={{ textAlign: 'center', marginTop: 10 }}>Nên đo cùng thời điểm (sáng, sau khi đi vệ sinh) để số liệu dễ so sánh.</div>
-      {open && <BodySheet last={Object.fromEntries(METRICS.map(([k]) => [k, latest(k)]))} onClose={() => setOpen(false)} onSaved={() => { setOpen(false); reload(); }} />}
+      {open && <BodySheet prefill={open.prefill} last={Object.fromEntries(METRICS.map(([k]) => [k, latest(k)]))} onClose={() => setOpen(false)} onSaved={() => { setOpen(false); reload(); }} />}
     </>
   );
 }
 
-function BodySheet({ last, onClose, onSaved }) {
-  const [date, setDate] = useState(todayISO());
-  const [f, setF] = useState(Object.fromEntries(METRICS.map(([k]) => [k, last[k] ?? ''])));
+function BodySheet({ last, prefill, onClose, onSaved }) {
+  const [date, setDate] = useState(prefill?.measured_on || todayISO());
+  // Quét AI: chỉ điền những số AI đọc được, các ô còn lại để trống để không ghi đè số cũ
+  const [f, setF] = useState(Object.fromEntries(METRICS.map(([k]) => [k, prefill ? prefill[k] ?? '' : last[k] ?? ''])));
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   async function save(e) {
@@ -264,12 +303,18 @@ function BodySheet({ last, onClose, onSaved }) {
     try { await api.put('/api/body', body); onSaved(); } catch (e2) { setErr(e2.message); setBusy(false); }
   }
   return (
-    <Sheet title="Ghi số đo" onClose={onClose} onSubmit={save}>
+    <Sheet title={prefill ? 'Kết quả quét phiếu' : 'Ghi số đo'} onClose={onClose} onSubmit={save}>
       {err && <div className="err">{err}</div>}
-      <Field label="Ngày"><input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+      {prefill && (
+        <div className="tip" style={{ marginTop: 0, marginBottom: 14 }}>
+          🤖 AI đọc từ ảnh (độ chắc: {{ high: 'cao', medium: 'vừa', low: 'thấp' }[prefill.confidence]}). <b>Hãy đối chiếu từng số với phiếu rồi mới lưu</b>, vì AI có thể đọc sai.
+          {prefill.note ? ` ${prefill.note}` : ''} Ảnh không được lưu lại.
+        </div>
+      )}
+      <Field label="Ngày đo"><input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
       <div className="grid-fields">
-        {METRICS.map(([k, l, u]) => (
-          <div key={k}><label>{l} ({u})</label><input className="input" inputMode="decimal" value={f[k]} onChange={(e) => setF((o) => ({ ...o, [k]: e.target.value.replace(',', '.') }))} /></div>
+        {METRICS.filter(([k]) => !prefill || SCAN_KEYS.includes(k) || f[k] !== '').map(([k, l, u]) => (
+          <div key={k}><label>{l}{u ? ` (${u})` : ''}</label><input className="input" inputMode="decimal" value={f[k]} onChange={(e) => setF((o) => ({ ...o, [k]: e.target.value.replace(',', '.') }))} /></div>
         ))}
       </div>
       <button className="btn" disabled={busy}>{busy ? 'Đang lưu…' : 'Lưu'}</button>

@@ -10,6 +10,8 @@ const PORT = process.env.PORT || 4000;
 
 const origins = (process.env.CORS_ORIGIN || '*').split(',').map((s) => s.trim());
 app.use(cors({ origin: origins.includes('*') ? true : origins }));
+// Ảnh phiếu InBody gửi lên dạng base64 nên đường dẫn /api/ai cho phép body lớn hơn
+app.use('/api/ai', express.json({ limit: '5mb' }));
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/', (_req, res) => res.json({ ok: true, name: 'routine-api' }));
@@ -104,6 +106,7 @@ app.put('/api/me', auth, wrap(async (req, res) => {
 
 app.use('/api', require('./routes/habits'));
 app.use('/api', require('./routes/life'));
+app.use('/api', require('./routes/ai'));
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Dữ liệu gửi lên quá lớn (ảnh đại diện quá nặng)' });

@@ -135,7 +135,7 @@ r.delete('/workouts/:id', auth, wrap(async (req, res) => {
 const num = (label, max) => ({ t: 'num', min: 0, max, label });
 r.use(daily({
   path: '/body', table: 'body_metrics', dateField: 'on_date',
-  fields: { weight: num('Cân nặng', 400), body_fat: num('Body fat', 80), waist: num('Vòng eo', 300), chest: num('Vòng ngực', 300), arm: num('Vòng tay', 100), shoulder: num('Vòng vai', 300) },
+  fields: { weight: num('Cân nặng', 400), body_fat: num('Body fat', 80), muscle_mass: num('Khối lượng cơ', 200), fat_mass: num('Khối lượng mỡ', 300), bmi: num('BMI', 100), visceral_fat: num('Mỡ nội tạng', 60), bmr: num('BMR', 10000), waist: num('Vòng eo', 300), chest: num('Vòng ngực', 300), arm: num('Vòng tay', 100), shoulder: num('Vòng vai', 300) },
 }));
 r.use(daily({
   path: '/nutrition', table: 'nutrition_logs', dateField: 'on_date',

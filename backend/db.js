@@ -103,6 +103,12 @@ CREATE TABLE IF NOT EXISTS body_metrics (
   weight NUMERIC, body_fat NUMERIC, waist NUMERIC, chest NUMERIC, arm NUMERIC, shoulder NUMERIC,
   PRIMARY KEY (user_id, on_date)
 );
+-- Chỉ số từ phiếu InBody: khối lượng cơ, khối lượng mỡ, BMI, mỡ nội tạng, BMR
+ALTER TABLE body_metrics ADD COLUMN IF NOT EXISTS muscle_mass NUMERIC;
+ALTER TABLE body_metrics ADD COLUMN IF NOT EXISTS fat_mass NUMERIC;
+ALTER TABLE body_metrics ADD COLUMN IF NOT EXISTS bmi NUMERIC;
+ALTER TABLE body_metrics ADD COLUMN IF NOT EXISTS visceral_fat NUMERIC;
+ALTER TABLE body_metrics ADD COLUMN IF NOT EXISTS bmr NUMERIC;
 CREATE TABLE IF NOT EXISTS nutrition_logs (
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   on_date DATE NOT NULL,
@@ -195,7 +201,8 @@ async function initDb() {
   const chk = await pool.query(`
     SELECT to_regclass('public.week_reviews') IS NOT NULL
        AND to_regclass('public.users') IS NOT NULL
-       AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'habits' AND column_name = 'once_on') AS ok`);
+       AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'habits' AND column_name = 'once_on')
+       AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'body_metrics' AND column_name = 'bmr') AS ok`);
   if (chk.rows[0].ok) return;
   const c = await pool.connect();
   try {

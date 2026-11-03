@@ -89,7 +89,7 @@ async function geminiCall(body, { long, remaining }) {
   try {
     return await geminiOnce(GEMINI_MODEL, body, Math.min(per, remaining()));
   } catch (e) {
-    if (!e.retryable || long || !fallback || remaining() < MIN_ATTEMPT_MS) throw e;
+    if (!e.retryable || !fallback || remaining() < MIN_ATTEMPT_MS) throw e; // 503 trả về rất nhanh nên vẫn còn thời gian thử model dự phòng
     console.error(`Gemini ${GEMINI_MODEL} quá tải, thử model dự phòng ${fallback}`);
     try { return await geminiOnce(fallback, body, Math.min(per, remaining())); } catch (e2) { throw e2.status === 503 && /không tồn tại/.test(e2.message) ? e : e2; }
   }
